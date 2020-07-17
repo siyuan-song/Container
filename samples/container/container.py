@@ -1,10 +1,7 @@
 """
 Mask R-CNN
-Train on the toy Balloon dataset and implement color splash effect.
+Train on the Container dataset.
 
-Copyright (c) 2018 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
 
 ------------------------------------------------------------
 
@@ -12,19 +9,19 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
     # Train a new model starting from pre-trained COCO weights
-    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=coco
+    python container.py train --dataset=/path/to/container/dataset --weights=coco
 
     # Resume training a model that you had trained earlier
-    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=last
+    python container.py train --dataset=/path/to/container/dataset --weights=last
 
     # Train a new model starting from ImageNet weights
-    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=imagenet
+    python container.py train --dataset=/path/to/container/dataset --weights=imagenet
 
     # Apply color splash to an image
-    python3 balloon.py splash --weights=/path/to/weights/file.h5 --image=<URL or path to file>
+    python container.py splash --weights=/path/to/weights/file.h5 --image=<URL or path to file>
 
     # Apply color splash to video using the last weights you trained
-    python3 balloon.py splash --weights=last --video=<URL or path to file>
+    python container.py splash --weights=last --video=<URL or path to file>
 """
 
 import os
@@ -61,8 +58,8 @@ class ContainerConfig(Config):
     # Give the configuration a recognizable name
     NAME = "container"
 
-    # We use a GPU with 12GB memory, which can fit two images.
-    # Adjust down if you use a smaller GPU.
+    # We use a GPU with 6GB memory, which can fit one image.
+    # Adjust up if you use a bigger GPU.
     IMAGES_PER_GPU = 1
 
     # Number of classes (including background)
@@ -71,7 +68,7 @@ class ContainerConfig(Config):
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 100
 
-    # Skip detections with < 90% confidence
+    # Skip detections with < 80% confidence
     DETECTION_MIN_CONFIDENCE = 0.8
 
 
@@ -86,7 +83,7 @@ class ContainerDataset(utils.Dataset):
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
         """
-        # Add classes. We have only one class to add.
+        # Add classes. We have seven classed to add.
         self.add_class("container", 1, "Cola Bottle")
         self.add_class("container", 2, "Fanta Bottle")
         self.add_class("container", 3, "Cherry Coke Bottle")
@@ -127,7 +124,6 @@ class ContainerDataset(utils.Dataset):
             # Get the x, y coordinaets of points of the polygons that make up
             # the outline of each object instance. These are stores in the
             # shape_attributes (see json format above)
-            # The if condition is needed to support VIA versions 1.x and 2.x.
             polygons = [r['shape_attributes'] for r in a['regions']]
             type = [r['region_attributes']['type'] for r in a['regions']]
             type_dict = {"Cola Bottle":1, "Fanta Bottle":2, "Cherry Coke Bottle":3, "Coke Zero Bottle":4, "Mtn Dew Bottle":5, "Cola Can":6, "Fanta Can":7}
@@ -174,8 +170,7 @@ class ContainerDataset(utils.Dataset):
             rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
             mask[rr, cc, i] = 1
 
-        # Return mask, and array of class IDs of each instance. Since we have
-        # one class ID only, we return an array of 1s
+        # Return mask, and array of class IDs of each instance. 
         return (mask.astype(np.bool),class_ids)
 
     def image_reference(self, image_id):
@@ -199,9 +194,9 @@ def train(model):
     dataset_val.load_container(args.dataset, "val")
     dataset_val.prepare()
 
-    # *** This training schedule is an example. Update to your needs ***
-    # Since we're using a very small dataset, and starting from
-    # COCO trained weights, we don't need to train too long. Also,
+    # *** This training schedule is an example. Update to your needs. ***
+    # Since we're using a small dataset, and starting from COCO
+    # trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
     print("Training network heads")
     model.train(dataset_train, dataset_val,
