@@ -34,6 +34,7 @@ The code in `container.py` is set to train for 3K steps (30 epochs of 100 steps 
 ## Test and evaluate the Container model
 
 Use a single image to test and show the performance of the model, calculate the mean Average Presicion (mAP) using all 40 images in validation set.
+(Modify the path to the trained model)
 ```
 python demo.py
 ```
