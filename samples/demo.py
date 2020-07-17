@@ -111,14 +111,38 @@ class_names = ['BG','Cola Bottle','Fanta Bottle','Cherry Coke Bottle','Coke Zero
 # Load a random image from the images folder
 ##file_names = next(os.walk(IMAGE_DIR))[2]
 ##image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
-image = skimage.io.imread(os.path.join(IMAGE_DIR,'Image0190.png'))
-image = image[:,:,:3]
+test_image = skimage.io.imread(os.path.join(IMAGE_DIR,'Image0170.png'))
+test_image = image[:,:,:3]
 
 # Run detection
-results = model.detect([image], verbose=1)
+results = model.detect([test_image], verbose=1)
 
 # Visualize results
 r = results[0]
-visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
+visualize.display_instances(test_image, r['rois'], r['masks'], r['class_ids'], 
                             class_names, r['scores'])
 
+# Evaluation
+# Compute VOC-Style mAP @ IoU=0.5
+# Running on 40 images. Increase for better accuracy.
+from container import ContainerDataset
+dataset_val = ContainerDataset()
+dataset_val.load_container(os.path.join(ROOT_DIR, "samples/container/dataset"), "val")
+dataset_val.prepare()
+
+image_ids = np.random.choice(dataset_val.image_ids, 40)
+APs = []
+
+for image_id in image_ids:
+    # Load image and ground truth data
+    image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset_val, config, image_id, use_mini_mask=False)
+    image = image[:,:,:3]
+    
+    # Run object detection
+    results = model.detect([image], verbose=0)
+    r = results[0]
+    # Compute AP
+    AP, precisions, recalls, overlaps = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'])
+    APs.append(AP)
+    
+print("mAP: ", np.mean(APs))
